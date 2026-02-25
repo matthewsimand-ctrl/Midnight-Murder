@@ -12,7 +12,7 @@ const io = new Server(httpServer, {
   },
 });
 
-const PORT = 3000;
+const PORT = process.env.PORT || 10000;
 
 // Game State
 type Role = "killer" | "witness" | "investigator" | "forensics";
@@ -498,11 +498,18 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
+    // This serves your React frontend files from the 'dist' folder
     app.use(express.static("dist"));
+    
+    // Crucial for React Router/SPAs: 
+    // This ensures that if a user refreshes the page, the server sends back the index.html
+    app.get("*", (req, res) => {
+      res.sendFile(path.resolve("dist/index.html"));
+    });
   }
 
   httpServer.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Server running on port ${PORT}`);
   });
 }
 
