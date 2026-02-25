@@ -496,41 +496,28 @@ app.get("/api/health", (req, res) => {
 });
 
 async function startServer() {
+  // Ensure we use Render's dynamic port
   const PORT = process.env.PORT || 10000;
 
   if (process.env.NODE_ENV === "production") {
-    // We use process.cwd() to ensure we are at the root of the Render project
+    // 1. Point to the 'dist' folder created by 'npm run build'
     const distPath = path.join(process.cwd(), "dist");
     
-    console.log(`Checking for assets in: ${distPath}`);
-
-    // Serve static files FIRST
+    // 2. Serve static files from /dist
     app.use(express.static(distPath));
 
-    // Fallback for SPA
+    // 3. Catch-all: Send the BUILT index.html for any other route
     app.get("*", (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
     });
   } else {
+    // Development mode logic
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
   }
-
-import fs from 'fs';
-
-const distPath = path.join(process.cwd(), "dist");
-if (fs.existsSync(distPath)) {
-  console.log("✅ Dist folder found!");
-  console.log("Files in dist:", fs.readdirSync(distPath));
-  if (fs.existsSync(path.join(distPath, "assets"))) {
-    console.log("Files in assets:", fs.readdirSync(path.join(distPath, "assets")));
-  }
-} else {
-  console.log("❌ Dist folder NOT found at:", distPath);
-}
 
   httpServer.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on port ${PORT}`);
