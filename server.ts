@@ -491,7 +491,7 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
-sync function startServer() {
+async function startServer() {
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
@@ -499,12 +499,14 @@ sync function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    // 2. Use path.join and __dirname to be 100% explicit
+    // 1. Force the server to look in the root folder for the 'dist' directory
     const distPath = path.join(process.cwd(), "dist");
     
+    // 2. Serve static files from /dist (where your CSS/JS live)
     app.use(express.static(distPath));
 
-    // 3. This catch-all route MUST come AFTER express.static
+    // 3. IMPORTANT: This fallback MUST stay below express.static
+    // It tells the server: "If you don't find a specific file, just give them index.html"
     app.get("*", (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
     });
