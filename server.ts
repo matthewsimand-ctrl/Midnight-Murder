@@ -497,39 +497,47 @@ app.get("/api/health", (req, res) => {
 });
 
 async function startServer() {
-  // Ensure we use Render's dynamic port
   const PORT = process.env.PORT || 10000;
 
   if (process.env.NODE_ENV === "production") {
-  const distPath = path.join(process.cwd(), "dist");
-  const assetsPath = path.join(distPath, "assets");
+    const distPath = path.join(process.cwd(), "dist");
+    const assetsPath = path.join(distPath, "assets");
 
-  console.log("--- DEBUG START ---");
-  console.log("Current Working Directory:", process.cwd());
-  console.log("Expected Dist Path:", distPath);
-  
-  // Check if dist exists
-  if (fs.existsSync(distPath)) {
-    console.log("✅ Dist folder exists.");
-    console.log("Contents of dist:", fs.readdirSync(distPath));
+    console.log("--- DEBUG START ---");
+    console.log("Current Working Directory:", process.cwd());
+    console.log("Expected Dist Path:", distPath);
     
-    // Check if assets exist
-    if (fs.existsSync(assetsPath)) {
-      console.log("✅ Assets folder exists.");
-      console.log("Contents of assets:", fs.readdirSync(assetsPath));
+    if (fs.existsSync(distPath)) {
+      console.log("✅ Dist folder exists.");
+      console.log("Contents of dist:", fs.readdirSync(distPath));
+      if (fs.existsSync(assetsPath)) {
+        console.log("✅ Assets folder exists.");
+        console.log("Contents of assets:", fs.readdirSync(assetsPath));
+      } else {
+        console.log("❌ Assets folder NOT found inside dist!");
+      }
     } else {
-      console.log("❌ Assets folder NOT found inside dist!");
+      console.log("❌ Dist folder NOT found!");
+      console.log("Root directory contents:", fs.readdirSync(process.cwd()));
     }
-  } else {
-    console.log("❌ Dist folder NOT found! This is why you get 404s.");
-    // Let's see what IS there instead
-    console.log("Root directory contents:", fs.readdirSync(process.cwd()));
-  }
-  console.log("--- DEBUG END ---");
+    console.log("--- DEBUG END ---");
 
-  app.use(express.static(distPath));
-  app.get("*", (req, res) => {
-    res.sendFile(path.join(distPath, "index.html"));
+    app.use(express.static(distPath));
+    app.get("*", (req, res) => {
+      res.sendFile(path.join(distPath, "index.html"));
+    });
+  } else {
+    // Development Mode
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: "spa",
+    });
+    app.use(vite.middlewares);
+  }
+
+  // This MUST be outside the IF blocks so it always runs
+  httpServer.listen(PORT, "0.0.0.0", () => {
+    console.log(`Server running on port ${PORT}`);
   });
 }
 
