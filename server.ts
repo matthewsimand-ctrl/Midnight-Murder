@@ -6,7 +6,6 @@ import { v4 as uuidv4 } from "uuid"
 import path from "path";
 import { fileURLToPath } from "url";
 
-// Add these two lines at the top to handle ES Module paths
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -497,28 +496,29 @@ app.get("/api/health", (req, res) => {
 });
 
 async function startServer() {
-  if (process.env.NODE_ENV !== "production") {
-    // Development mode...
+  const PORT = process.env.PORT || 10000;
+
+  if (process.env.NODE_ENV === "production") {
+    // We use process.cwd() to ensure we are at the root of the Render project
+    const distPath = path.join(process.cwd(), "dist");
+    
+    console.log(`Checking for assets in: ${distPath}`);
+
+    // Serve static files FIRST
+    app.use(express.static(distPath));
+
+    // Fallback for SPA
+    app.get("*", (req, res) => {
+      res.sendFile(path.join(distPath, "index.html"));
+    });
+  } else {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
-  } else {
-    // 2. PRODUCTION MODE (Render)
-    const distPath = path.resolve(__dirname, "dist");
-    
-    // FIRST: Serve actual files from the dist folder
-    app.use(express.static(distPath));
-
-    // SECOND: Serve index.html for any route that isn't a file
-    // This allows React Router to work without 404ing on refresh
-    app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
-    });
   }
 
-  const PORT = process.env.PORT || 10000;
   httpServer.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on port ${PORT}`);
   });
