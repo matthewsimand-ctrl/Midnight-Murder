@@ -2,8 +2,13 @@ import express from "express";
 import { createServer as createViteServer } from "vite";
 import { createServer } from "http";
 import { Server } from "socket.io";
-import { v4 as uuidv4 } from "uuid";
+import { v4 as uuidv4 } from "uuid"
 import path from "path";
+import { fileURLToPath } from "url";
+
+// Add these two lines at the top to handle ES Module paths
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const httpServer = createServer(app);
@@ -499,19 +504,20 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    // 1. Force the server to look in the root folder for the 'dist' directory
-    const distPath = path.join(process.cwd(), "dist");
+    // 1. Explicitly point to the 'dist' folder
+    const distPath = path.resolve(__dirname, "dist");
     
-    // 2. Serve static files from /dist (where your CSS/JS live)
+    // 2. Serve static files (this fixes the 404 on .js and .css)
     app.use(express.static(distPath));
 
-    // 3. IMPORTANT: This fallback MUST stay below express.static
-    // It tells the server: "If you don't find a specific file, just give them index.html"
+    // 3. The fallback for SPA routing (MUST be after express.static)
     app.get("*", (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
 
+  // Ensure you are using the dynamic PORT provided by Render
+  const PORT = process.env.PORT || 10000;
   httpServer.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on port ${PORT}`);
   });
