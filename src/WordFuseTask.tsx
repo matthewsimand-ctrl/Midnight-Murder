@@ -8,13 +8,12 @@ const REFINED_PUZZLES = [
   { words: ["SNOW", "BASE", "FOOT"], answer: "ball" },
   { words: ["DOOR", "BOARD", "HOLE"], answer: "key" },
   { words: ["TIME", "LINE", "WORK"], answer: "out" },
-  { words: ["LIFE", "BOAT", "GUARD"], answer: "life" },
   { words: ["BED", "BATH", "MATE"], answer: "room" },
   { words: ["AIR", "PORT", "PLANE"], answer: "air" },
   { words: ["BLACK", "BOARD", "BIRD"], answer: "black" },
 ];
 
-function LetterBoxes({ answer, value, onChange, onSubmit, hintCount, isActive, errorMsg }: any) {
+function LetterBoxes({ answer, value, onChange, onSubmit, isActive, errorMsg }: any) {
   const ghostRef = useRef<HTMLInputElement>(null);
   const len = answer.length;
   const letters = value.toLowerCase().split("").slice(0, len);
@@ -34,7 +33,6 @@ function LetterBoxes({ answer, value, onChange, onSubmit, hintCount, isActive, e
 
   const handleGhostKeyDown = (e: any) => {
     if (e.key === "Enter") { e.preventDefault(); onSubmit(); }
-    if (e.key === "Backspace" && value === "" && hintCount > 0) e.preventDefault();
   };
 
   return (
@@ -53,35 +51,33 @@ function LetterBoxes({ answer, value, onChange, onSubmit, hintCount, isActive, e
 
       <div className="flex gap-1.5 flex-wrap justify-center mb-3">
         {Array.from({ length: len }).map((_, i) => {
-          const isHint = i < hintCount;
           const ch = letters[i] ?? "";
           const isCursor = i === Math.min(letters.length, len - 1) && isActive && letters.length < len;
-          
+
           let boxClass = "w-9 h-11 bg-zinc-800 border-2 border-zinc-700 rounded-lg flex items-center justify-center font-mono text-lg font-bold text-white uppercase transition-colors";
-          if (isHint) boxClass = "w-9 h-11 bg-emerald-900/20 border-2 border-emerald-500 rounded-lg flex items-center justify-center font-mono text-lg font-bold text-emerald-400 uppercase transition-colors";
-          else if (ch) boxClass = "w-9 h-11 bg-zinc-800 border-2 border-zinc-500 rounded-lg flex items-center justify-center font-mono text-lg font-bold text-white uppercase transition-colors";
+          if (ch) boxClass = "w-9 h-11 bg-zinc-800 border-2 border-zinc-500 rounded-lg flex items-center justify-center font-mono text-lg font-bold text-white uppercase transition-colors";
           else if (isCursor) boxClass = "w-9 h-11 bg-zinc-800 border-2 border-emerald-500 shadow-[0_0_0_1px_rgba(16,185,129,1)] rounded-lg flex items-center justify-center font-mono text-lg font-bold text-white uppercase transition-colors";
 
           return (
             <div key={i} className={boxClass}>
-              {isHint ? answer[i].toUpperCase() : ch.toUpperCase()}
+              {ch.toUpperCase()}
             </div>
           );
         })}
       </div>
 
       <div className="flex justify-center gap-2 min-h-[44px] items-center w-full mt-2">
-        <button 
+        <button
           className="bg-emerald-600 text-white border-none rounded-lg px-6 py-2.5 font-sans text-sm font-semibold cursor-pointer transition-all hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed"
-          onClick={onSubmit} 
+          onClick={onSubmit}
           disabled={value.length < len}
         >
           Submit
         </button>
-        {value.length > hintCount && (
-          <button 
+        {value.length > 0 && (
+          <button
             className="bg-transparent text-zinc-400 border border-zinc-700 rounded-lg px-4 py-2.5 font-sans text-sm cursor-pointer transition-colors hover:border-zinc-400 hover:text-zinc-200"
-            onClick={() => onChange(answer.slice(0, hintCount).toLowerCase())}
+            onClick={() => onChange("")}
           >
             Clear
           </button>
@@ -95,20 +91,13 @@ function LetterBoxes({ answer, value, onChange, onSubmit, hintCount, isActive, e
 export function WordFuseTask({ onComplete, onExit }: { onComplete: () => void, onExit: () => void }) {
   const [puzzle] = useState(() => REFINED_PUZZLES[Math.floor(Math.random() * REFINED_PUZZLES.length)]);
   const [guess, setGuess] = useState("");
-  const [hintCount, setHintCount] = useState(0);
   const [errorMsg, setErrorMsg] = useState("");
   const [shaking, setShaking] = useState(false);
-  const [wrongGuesses, setWrongGuesses] = useState(0);
 
   const setGuessSafe = useCallback((val: string) => {
-    const answer = puzzle.answer.toLowerCase();
-    const hintPrefix = answer.slice(0, hintCount);
-    let safe = val.toLowerCase();
-    if (!safe.startsWith(hintPrefix)) safe = hintPrefix + safe.slice(hintPrefix.length);
-    safe = safe.slice(0, answer.length);
-    setGuess(safe);
+    setGuess(val.toLowerCase().slice(0, puzzle.answer.length));
     if (errorMsg) setErrorMsg("");
-  }, [puzzle.answer, hintCount, errorMsg]);
+  }, [puzzle.answer, errorMsg]);
 
   const submitGuess = useCallback(() => {
     const g = guess.toLowerCase().trim();
@@ -120,22 +109,10 @@ export function WordFuseTask({ onComplete, onExit }: { onComplete: () => void, o
     } else {
       setShaking(true);
       setTimeout(() => setShaking(false), 500);
-      
-      const newWrong = wrongGuesses + 1;
-      setWrongGuesses(newWrong);
-      
-      if (newWrong <= a.length - 1) {
-        const newHintCount = Math.min(hintCount + 1, a.length - 1);
-        setHintCount(newHintCount);
-        const newHint = a.slice(0, newWrong).toUpperCase();
-        setErrorMsg(`Hint: starts with "${newHint}"`);
-        setGuess(a.slice(0, newHintCount));
-      } else {
-        setErrorMsg("Not quite — try again");
-        setGuess(a.slice(0, hintCount));
-      }
+      setErrorMsg("Not quite — try again!");
+      setGuess("");
     }
-  }, [guess, puzzle.answer, hintCount, wrongGuesses, onComplete]);
+  }, [guess, puzzle.answer, onComplete]);
 
   return (
     <div className="w-full max-w-sm flex flex-col items-center">
@@ -160,14 +137,13 @@ export function WordFuseTask({ onComplete, onExit }: { onComplete: () => void, o
           value={guess}
           onChange={setGuessSafe}
           onSubmit={submitGuess}
-          hintCount={hintCount}
           isActive={true}
           errorMsg={errorMsg}
         />
       </div>
 
       <button onClick={onExit} className="mt-4 w-full py-2 text-xs text-zinc-500 hover:text-zinc-300">Exit Task</button>
-      
+
       <style>{`
         @keyframes shake {
           0%,100% { transform: translateX(0); }
