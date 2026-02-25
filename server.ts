@@ -519,6 +519,19 @@ async function startServer() {
     app.use(vite.middlewares);
   }
 
+import fs from 'fs';
+
+const distPath = path.join(process.cwd(), "dist");
+if (fs.existsSync(distPath)) {
+  console.log("✅ Dist folder found!");
+  console.log("Files in dist:", fs.readdirSync(distPath));
+  if (fs.existsSync(path.join(distPath, "assets"))) {
+    console.log("Files in assets:", fs.readdirSync(path.join(distPath, "assets")));
+  }
+} else {
+  console.log("❌ Dist folder NOT found at:", distPath);
+}
+
   httpServer.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on port ${PORT}`);
   });
