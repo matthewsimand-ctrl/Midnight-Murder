@@ -3,6 +3,7 @@ import { createServer as createViteServer } from "vite";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import { v4 as uuidv4 } from "uuid";
+import path from "path";
 
 const app = express();
 const httpServer = createServer(app);
@@ -490,7 +491,7 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
-async function startServer() {
+sync function startServer() {
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
@@ -498,13 +499,14 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    // This serves your React frontend files from the 'dist' folder
-    app.use(express.static("dist"));
+    // 2. Use path.join and __dirname to be 100% explicit
+    const distPath = path.join(process.cwd(), "dist");
     
-    // Crucial for React Router/SPAs: 
-    // This ensures that if a user refreshes the page, the server sends back the index.html
+    app.use(express.static(distPath));
+
+    // 3. This catch-all route MUST come AFTER express.static
     app.get("*", (req, res) => {
-      res.sendFile(path.resolve("dist/index.html"));
+      res.sendFile(path.join(distPath, "index.html"));
     });
   }
 
