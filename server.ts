@@ -77,26 +77,19 @@ const ACCESSORIES = ["Glasses", "Hat", "Watch", "Necklace", "Earrings", "None"];
 const PLAYER_COLORS = ["#ef4444", "#3b82f6", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316", "#64748b", "#84cc16"];
 
 const CLUE_MAP: Record<string, string[]> = {
-  // Handedness
   "Left": ["Southpaw", "Sinister", "Scissors"],
   "Right": ["Standard", "Dexterous", "Common"],
-  
-  // Hair Colors
   "Black": ["Midnight", "Raven", "Darkness"],
   "Brown": ["Earth", "Chestnut", "Chocolate"],
   "Blonde": ["Golden", "Sunlight", "Straw"],
   "Red": ["Fire", "Crimson", "Ginger"],
   "Gray": ["Silver", "Wisdom", "Ash"],
-  
-  // Shoe Types
   "Boots": ["Winter", "Heavy", "Mud"],
   "Running Shoes": ["Athletic", "Laces", "Track"],
   "Flip Flops": ["Summer", "Beach", "Toes"],
   "Loafers": ["Casual", "Slip-on", "Leather"],
   "Sneakers": ["Street", "Comfort", "Rubber"],
   "High Heels": ["Formal", "Tall", "Click-clack"],
-  
-  // T-Shirt Designs
   "Plain": ["Simple", "Basic", "Unadorned"],
   "Striped": ["Lines", "Zebra", "Parallel"],
   "Polka Dot": ["Spots", "Circles", "Retro"],
@@ -107,8 +100,6 @@ const CLUE_MAP: Record<string, string[]> = {
   "Floral": ["Nature", "Garden", "Blossom"],
   "Abstract": ["Artistic", "Confusing", "Shapes"],
   "Geometric": ["Math", "Angles", "Sharp"],
-  
-  // Occupations
   "Teacher": ["Chalk", "Grades", "School"],
   "Doctor": ["Stethoscope", "Medicine", "Hospital"],
   "Engineer": ["Math", "Build", "Design"],
@@ -124,8 +115,6 @@ const CLUE_MAP: Record<string, string[]> = {
   "Pilot": ["Sky", "Airplane", "Clouds"],
   "Lawyer": ["Court", "Suit", "Judge"],
   "Farmer": ["Tractor", "Crops", "Dirt"],
-  
-  // Accessories
   "Glasses": ["Vision", "Lenses", "Frames"],
   "Hat": ["Headwear", "Shade", "Cap"],
   "Watch": ["Time", "Wrist", "Tick"],
@@ -143,10 +132,10 @@ function getHeightClue(heightStr: string): string {
 }
 
 function generateAttributes() {
-  const heightInches = Math.floor(Math.random() * 37) + 48; // 48 to 84 inches (4'0" to 7'0")
+  const heightInches = Math.floor(Math.random() * 37) + 48;
   const feet = Math.floor(heightInches / 12);
   const inches = heightInches % 12;
-  
+
   return {
     handedness: HANDEDNESS[Math.floor(Math.random() * HANDEDNESS.length)],
     hairColor: HAIR_COLORS[Math.floor(Math.random() * HAIR_COLORS.length)],
@@ -164,13 +153,12 @@ function assignRoles(players: Player[]) {
   while (roles.length < players.length) {
     roles.push("investigator");
   }
-  
-  // Shuffle roles
+
   for (let i = roles.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [roles[i], roles[j]] = [roles[j], roles[i]];
   }
-  
+
   players.forEach((p, i) => {
     p.role = roles[i];
   });
@@ -179,8 +167,7 @@ function assignRoles(players: Player[]) {
 function generateTasks(): GameTask[] {
   const tasks: GameTask[] = [];
   const types: TaskType[] = ["word_fuse", "wordle", "backwards_feud", "taxi_jam"];
-  
-  // Generate 15 tasks scattered around a 2000x2000 map
+
   for (let i = 0; i < 15; i++) {
     tasks.push({
       id: uuidv4(),
@@ -197,7 +184,6 @@ function generateTasks(): GameTask[] {
 function generateClue(lobby: Lobby, isTampered: boolean): string {
   let targetPlayer: Player;
   if (isTampered) {
-    // Pick a random non-killer player
     const nonKillers = lobby.players.filter(p => p.role !== "killer");
     targetPlayer = nonKillers[Math.floor(Math.random() * nonKillers.length)] || lobby.players[0];
   } else {
@@ -207,17 +193,17 @@ function generateClue(lobby: Lobby, isTampered: boolean): string {
   const attrs = Object.keys(targetPlayer.attributes) as Array<keyof typeof targetPlayer.attributes>;
   const randomAttr = attrs[Math.floor(Math.random() * attrs.length)];
   const val = targetPlayer.attributes[randomAttr];
-  
+
   if (randomAttr === "height") {
     return getHeightClue(val);
   }
-  
+
   const possibleClues = CLUE_MAP[val];
   if (possibleClues && possibleClues.length > 0) {
     return possibleClues[Math.floor(Math.random() * possibleClues.length)];
   }
-  
-  return val; // Fallback
+
+  return val;
 }
 
 io.on("connection", (socket) => {
@@ -257,8 +243,7 @@ io.on("connection", (socket) => {
     if (lobby.status !== "lobby") {
       return callback({ error: "Game already in progress" });
     }
-    
-    // Check if name exists
+
     let finalName = name;
     let counter = 1;
     while (lobby.players.some(p => p.name === finalName)) {
@@ -307,17 +292,15 @@ io.on("connection", (socket) => {
     const lobby = lobbies[lobbyId];
     if (lobby && lobby.players.find(p => p.id === socket.id)?.isHost) {
       if (lobby.players.length < 3) {
-         // Need at least 3 players
-         return;
+        return;
       }
       assignRoles(lobby.players);
       lobby.tasks = generateTasks();
       lobby.status = "playing";
       lobby.startTime = Date.now();
-      lobby.endTime = Date.now() + 5 * 60 * 1000; // 5 minutes
+      lobby.endTime = Date.now() + 5 * 60 * 1000;
       io.to(lobbyId).emit("game_started", lobby);
-      
-      // Auto transition to discussion after 5 mins
+
       setTimeout(() => {
         if (lobbies[lobbyId] && lobbies[lobbyId].status === "playing") {
           lobbies[lobbyId].status = "discussion";
@@ -334,7 +317,6 @@ io.on("connection", (socket) => {
       if (player) {
         player.x = x;
         player.y = y;
-        // Broadcast movement to others in the lobby (volatile for performance)
         socket.to(lobbyId).volatile.emit("player_moved", { id: socket.id, x, y });
       }
     }
@@ -346,7 +328,7 @@ io.on("connection", (socket) => {
       const task = lobby.tasks.find(t => t.id === taskId);
       if (task && !task.completed) {
         task.completed = true;
-        
+
         const player = lobby.players.find(p => p.id === socket.id);
         if (player) {
           const isTampered = player.role === "killer";
@@ -375,6 +357,44 @@ io.on("connection", (socket) => {
     }
   });
 
+  // Killer steal/tamper ability
+  socket.on("steal_clue", (lobbyId: string, targetPlayerId: string, callback) => {
+    const lobby = lobbies[lobbyId];
+    if (!lobby || lobby.status !== "playing") return callback({ error: "Game not active" });
+
+    const thief = lobby.players.find(p => p.id === socket.id);
+    if (!thief || thief.role !== "killer") return callback({ error: "Only the killer can do this" });
+    if (thief.hasStolenClue) return callback({ error: "Already used steal ability" });
+
+    const target = lobby.players.find(p => p.id === targetPlayerId);
+    if (!target) return callback({ error: "Target not found" });
+
+    const targetClues = lobby.clues.filter(c => c.foundBy === targetPlayerId && !c.isTampered);
+
+    if (targetClues.length > 0) {
+      // Tamper an existing real clue found by target
+      const clue = targetClues[Math.floor(Math.random() * targetClues.length)];
+      clue.isTampered = true;
+      thief.hasStolenClue = true;
+      io.to(lobbyId).emit("clue_found", lobby.clues);
+      io.to(lobbyId).emit("lobby_update", lobby);
+      callback({ message: `Clue from ${target.name} tampered!` });
+    } else {
+      // Plant a fake clue attributed to target
+      const fakeClueText = generateClue(lobby, true);
+      lobby.clues.push({
+        id: uuidv4(),
+        text: fakeClueText,
+        isTampered: true,
+        foundBy: targetPlayerId
+      });
+      thief.hasStolenClue = true;
+      io.to(lobbyId).emit("clue_found", lobby.clues);
+      io.to(lobbyId).emit("lobby_update", lobby);
+      callback({ message: `Fake clue planted on ${target.name}!` });
+    }
+  });
+
   socket.on("vote", (lobbyId: string, targetPlayerId: string) => {
     const lobby = lobbies[lobbyId];
     if (lobby && lobby.status === "voting") {
@@ -382,21 +402,19 @@ io.on("connection", (socket) => {
       if (player) {
         player.votedFor = targetPlayerId;
         io.to(lobbyId).emit("lobby_update", lobby);
-        
-        // Check if everyone voted
+
         if (lobby.players.every(p => p.votedFor)) {
-          // Tally votes
           const votes: Record<string, number> = {};
           lobby.players.forEach(p => {
             if (p.votedFor) {
               votes[p.votedFor] = (votes[p.votedFor] || 0) + 1;
             }
           });
-          
+
           let maxVotes = 0;
           let suspectedId: string | null = null;
           let tie = false;
-          
+
           for (const [id, count] of Object.entries(votes)) {
             if (count > maxVotes) {
               maxVotes = count;
@@ -406,14 +424,13 @@ io.on("connection", (socket) => {
               tie = true;
             }
           }
-          
+
           const killer = lobby.players.find(p => p.role === "killer");
-          
+
           if (tie || suspectedId !== killer?.id) {
             lobby.winner = "killer";
             lobby.status = "game_over";
           } else {
-            // Killer caught, can guess witness
             lobby.status = "witness_guessing";
           }
           io.to(lobbyId).emit("lobby_update", lobby);
@@ -451,7 +468,6 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
-    // Handle disconnects (remove player from lobby if in lobby, or mark disconnected)
     for (const lobbyId in lobbies) {
       const lobby = lobbies[lobbyId];
       const playerIndex = lobby.players.findIndex(p => p.id === socket.id);
@@ -464,8 +480,6 @@ io.on("connection", (socket) => {
             lobby.players[0].isHost = true;
             io.to(lobbyId).emit("lobby_update", lobby);
           }
-        } else {
-          // In game, maybe just mark disconnected
         }
       }
     }
