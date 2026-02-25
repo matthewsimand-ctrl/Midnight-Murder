@@ -498,25 +498,26 @@ app.get("/api/health", (req, res) => {
 
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
+    // Development mode...
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
   } else {
-    // 1. Explicitly point to the 'dist' folder
+    // 2. PRODUCTION MODE (Render)
     const distPath = path.resolve(__dirname, "dist");
     
-    // 2. Serve static files (this fixes the 404 on .js and .css)
+    // FIRST: Serve actual files from the dist folder
     app.use(express.static(distPath));
 
-    // 3. The fallback for SPA routing (MUST be after express.static)
+    // SECOND: Serve index.html for any route that isn't a file
+    // This allows React Router to work without 404ing on refresh
     app.get("*", (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
 
-  // Ensure you are using the dynamic PORT provided by Render
   const PORT = process.env.PORT || 10000;
   httpServer.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on port ${PORT}`);
