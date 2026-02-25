@@ -5,6 +5,7 @@ import { Server } from "socket.io";
 import { v4 as uuidv4 } from "uuid"
 import path from "path";
 import { fileURLToPath } from "url";
+import fs from 'fs'; // Add this at the top with your other imports
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -500,27 +501,35 @@ async function startServer() {
   const PORT = process.env.PORT || 10000;
 
   if (process.env.NODE_ENV === "production") {
-    // 1. Point to the 'dist' folder created by 'npm run build'
-    const distPath = path.join(process.cwd(), "dist");
+  const distPath = path.join(process.cwd(), "dist");
+  const assetsPath = path.join(distPath, "assets");
+
+  console.log("--- DEBUG START ---");
+  console.log("Current Working Directory:", process.cwd());
+  console.log("Expected Dist Path:", distPath);
+  
+  // Check if dist exists
+  if (fs.existsSync(distPath)) {
+    console.log("✅ Dist folder exists.");
+    console.log("Contents of dist:", fs.readdirSync(distPath));
     
-    // 2. Serve static files from /dist
-    app.use(express.static(distPath));
-
-    // 3. Catch-all: Send the BUILT index.html for any other route
-    app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
-    });
+    // Check if assets exist
+    if (fs.existsSync(assetsPath)) {
+      console.log("✅ Assets folder exists.");
+      console.log("Contents of assets:", fs.readdirSync(assetsPath));
+    } else {
+      console.log("❌ Assets folder NOT found inside dist!");
+    }
   } else {
-    // Development mode logic
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
+    console.log("❌ Dist folder NOT found! This is why you get 404s.");
+    // Let's see what IS there instead
+    console.log("Root directory contents:", fs.readdirSync(process.cwd()));
   }
+  console.log("--- DEBUG END ---");
 
-  httpServer.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on port ${PORT}`);
+  app.use(express.static(distPath));
+  app.get("*", (req, res) => {
+    res.sendFile(path.join(distPath, "index.html"));
   });
 }
 
